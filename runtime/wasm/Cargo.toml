@@ -1,0 +1,21 @@
+[lib]
+crate-type = ['cdylib']
+
+[features]
+default = []
+std = ['data-space-runtime/std']
+
+[workspace]
+members = []
+[profile.release]
+lto = true
+panic = 'abort'
+
+[package]
+authors = ['Parity Technologies <admin@parity.io>']
+edition = '2018'
+name = 'data-space-runtime-wasm'
+version = '1.0.0'
+[dependencies.data-space-runtime]
+default-features = false
+path = '..'
