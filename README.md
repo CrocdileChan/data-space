@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # data-space
 
 A new SRML-based Substrate node, ready for hacking.
@@ -66,3 +67,6 @@ cargo run -- \
 ```
 
 Additional CLI usage options are available and may be shown by running `cargo run -- --help`.
+=======
+# data-space
+>>>>>>> 9cda01961c773104b99f580110b838cee0511b8e
