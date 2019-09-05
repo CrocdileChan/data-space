@@ -148,9 +148,3 @@ default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-version'
 rev = 'cc1d67e973fd02c0c997b164ba516cf041bf21f1'
-
-[dependencies]
-ipfs-api = "0.5.1"
-hyper    = "0.12"
-futures  = "0.1"
-
