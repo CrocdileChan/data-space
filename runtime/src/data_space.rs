@@ -30,7 +30,7 @@ pub struct Data<AccountId,Hash,Balance>{
     name: Vec<u8>,
     owner: AccountId,
     //ipfs_key: Vec<u8>,
-    //content: Vec<u8>,
+    content: Vec<u8>,
     price: Balance,
 }
 
@@ -45,6 +45,7 @@ decl_event! {
         PriceSet(AccountId,Hash,Balance),
         Bought(AccountId,AccountId,Hash,Balance),
         Uploaded(AccountId,Hash),
+        Downloaded(Vec<u8>),
         Removed(AccountId,Hash),
     }
 }
@@ -113,14 +114,15 @@ decl_module! {
             let nonce = Self::get_n();
             let random_hash = <system::Module<T>>::random_seed();
             let data_id = (random_hash,&user,nonce).using_encoded(<T as system::Trait>::Hashing::hash);
-            let data: Data<T::AccountId,T::Hash,T::Balance> = Data{
+            let data_info: Data<T::AccountId,T::Hash,T::Balance> = Data{
                 id: data_id,
                 name: data_name,
+                content: data,
                 owner: user.clone(),
                 price: price,
             };
 
-            Self::upload(user,data_id,data);
+            Self::upload(user,data_id,data_info);
             <Nonce<T>>::mutate(|n| *n += 1);
             Ok(())
         }
@@ -130,9 +132,10 @@ decl_module! {
                 let user = ensure_signed(origin)?;
                 let ds = Self::owner_of(user);
                 if Self::contains_data(data_id,ds){
-                    Ok(data)
+                    Self::deposit_event(RawEvent::Downloaded(data.content));
+                    Ok(())
                 }else {
-                    Err("you don't own the data")
+                   Err("you don't own the data")
                 }
             }else {
                    Err("data not found")
