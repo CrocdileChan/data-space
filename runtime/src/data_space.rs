@@ -14,11 +14,10 @@ pub trait Trait: balances::Trait {
 
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct DataSpace<AccountId,Hash,Balance> {
+pub struct DataSpace<AccountId,Hash> {
     user_id: AccountId,
     user_name: Vec<u8>,
-    // hashmap key is ipfs_hash
-    data_to_price: Vec<Data<AccountId,Hash,Balance>>,
+    own_data: Vec<Hash>,
     bought_list: Vec<Hash>,
     sold_list: Vec<Hash>,
 }
@@ -52,7 +51,7 @@ decl_event! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as DataStore {
-        Owners get(owner_of): map T::AccountId => DataSpace<T::AccountId,T::Hash,T::Balance>;
+        Owners get(owner_of): map T::AccountId => DataSpace<T::AccountId,T::Hash>;
 
         // data id => data struct
         DataInfo get(data): map T::Hash => Option<Data<T::AccountId,T::Hash,T::Balance>>;
@@ -67,10 +66,10 @@ decl_module! {
 
         fn register_account(origin, user_name: Vec<u8>) -> Result {
             let user_id = ensure_signed(origin)?;
-            let new_data_space: DataSpace<T::AccountId,T::Hash,T::Balance> = DataSpace{
+            let new_data_space: DataSpace<T::AccountId,T::Hash> = DataSpace{
                 user_id: user_id.clone(),
                 user_name: user_name,
-                data_to_price: Vec::new(),
+                own_data: Vec::new(),
                 bought_list: Vec::new(),
                 sold_list: Vec::new(),
             };
@@ -158,7 +157,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-    fn register(user_id: T::AccountId,new_data_space: DataSpace<T::AccountId,T::Hash,T::Balance>) {
+    fn register(user_id: T::AccountId,new_data_space: DataSpace<T::AccountId,T::Hash>) {
         <Owners<T>>::insert(&user_id,new_data_space);
         Self::deposit_event(RawEvent::Registered(user_id));
     }
@@ -166,7 +165,7 @@ impl<T: Trait> Module<T> {
     fn upload(user_id: T::AccountId, data_id: T::Hash, data: Data<T::AccountId,T::Hash,T::Balance>) {
         <DataInfo<T>>::insert(data_id.clone(),data.clone());
         let mut ds = Self::owner_of(&user_id);
-        ds.data_to_price.push(data);
+        ds.own_data.push(data_id.clone());
         Self::deposit_event(RawEvent::Uploaded(user_id,data_id));
     }
 
@@ -176,10 +175,10 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(RawEvent::Removed(user_id,data_id));
     }
 
-    fn contains_data(data_id: T::Hash, ds: DataSpace<T::AccountId,T::Hash,T::Balance>) -> bool{
-        //if contains in data_to_price or bought_list
-        for dp in &ds.data_to_price {
-            if dp.id == data_id {
+    fn contains_data(data_id: T::Hash, ds: DataSpace<T::AccountId,T::Hash>) -> bool{
+        //if contains in own_data or bought_list
+        for od in ds.own_data {
+            if od == data_id {
                 return true;
             }
         };
