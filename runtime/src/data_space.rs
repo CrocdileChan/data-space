@@ -66,7 +66,6 @@ decl_module! {
 
         fn register_account(origin, user_name: Vec<u8>) -> Result {
             let user_id = ensure_signed(origin)?;
-            //let dp: Vec<Data<T::Hash,T::Balance>> = Vec::new();
             let new_data_space: DataSpace<T::AccountId,T::Hash,T::Balance> = DataSpace{
                 user_id: user_id.clone(),
                 user_name: user_name,
@@ -104,9 +103,9 @@ decl_module! {
                 Self::deposit_event(RawEvent::Bought(buyer,seller,data_id,data_price));
                 Ok(())
             }else {
-                Err(())
-            };
-            Ok(())
+                Err("data not found")
+            }
+
         }
 
          fn upload_to_space(origin,data_name: Vec<u8>,data: Vec<u8>,price: T::Balance) -> Result {
@@ -133,13 +132,11 @@ decl_module! {
                 if Self::contains_data(data_id,ds){
                     Ok(data)
                 }else {
-                    Err(())
-                };
-                Ok(())
+                    Err("you don't own the data")
+                }
             }else {
-                Err(())
-            };
-            Ok(())
+                   Err("data not found")
+            }
 
         }
 
@@ -149,9 +146,8 @@ decl_module! {
                 Self::remove(user,data_id);
                 Ok(())
             }else {
-                Err(())
-            };
-            Ok(())
+                Err("data not found")
+            }
         }
 
     }
