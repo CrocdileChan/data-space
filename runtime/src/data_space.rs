@@ -1,12 +1,10 @@
 
 use rstd::vec::Vec;
 use parity_codec::{Decode, Encode};
-use runtime_primitives::traits::{As, Hash};
+use runtime_primitives::traits::Hash;
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,traits::Currency};
 use system::ensure_signed;
-use rstd::cmp;
-//use parity_codec::alloc::vec::Vec;
 
 pub trait Trait: balances::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -28,7 +26,6 @@ pub struct Data<AccountId,Hash,Balance>{
     id: Hash,
     name: Vec<u8>,
     owner: AccountId,
-    //ipfs_key: Vec<u8>,
     content: Vec<u8>,
     price: Balance,
 }
@@ -95,8 +92,8 @@ decl_module! {
 
                 <balances::Module<T> as Currency<_>>::transfer(&buyer, &seller, data_price)?;
 
-                let mut seller_ds = Self::owner_of(&seller);//.ok_or("no seller account you want")?;
-                let mut buyer_ds = Self::owner_of(&buyer);//.or_not("no account registered to buy data")?;
+                let mut seller_ds = Self::owner_of(&seller);
+                let mut buyer_ds = Self::owner_of(&buyer);
                 buyer_ds.bought_list.push(data_id);
                 seller_ds.sold_list.push(data_id);
 
@@ -143,7 +140,7 @@ decl_module! {
         }
 
         fn remove_from_space(origin,data_id: T::Hash) -> Result {
-            if let Some(data) = Self::data(data_id){
+            if let Some(_data) = Self::data(data_id){
                 let user = ensure_signed(origin)?;
                 Self::remove(user,data_id);
                 Ok(())
@@ -171,7 +168,8 @@ impl<T: Trait> Module<T> {
 
     fn remove(user_id: T::AccountId,data_id: T::Hash) {
         <DataInfo<T>>::remove(data_id.clone());
-        //remove from owners.
+        let mut ds: DataSpace<T::AccountId,T::Hash> = Self::owner_of(&user_id);
+        ds.own_data.retain(|&x| x!=data_id);
         Self::deposit_event(RawEvent::Removed(user_id,data_id));
     }
 
