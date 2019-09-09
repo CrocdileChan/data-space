@@ -15,6 +15,7 @@ pub trait Trait: balances::Trait {
 pub struct DataSpace<AccountId,Hash> {
     user_id: AccountId,
     user_name: Vec<u8>,
+    user_type: u16,
     own_data: Vec<Hash>,
     bought_list: Vec<Hash>,
     sold_list: Vec<Hash>,
@@ -61,11 +62,12 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
 
-        fn register_account(origin, user_name: Vec<u8>) -> Result {
+        fn register_account(origin, user_name: Vec<u8>, user_type: u16) -> Result {
             let user_id = ensure_signed(origin)?;
             let new_data_space: DataSpace<T::AccountId,T::Hash> = DataSpace{
                 user_id: user_id.clone(),
                 user_name: user_name,
+                user_type: user_type,
                 own_data: Vec::new(),
                 bought_list: Vec::new(),
                 sold_list: Vec::new(),
