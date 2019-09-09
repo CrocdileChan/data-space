@@ -52,6 +52,7 @@ decl_storage! {
         Owners get(owner_of): map T::AccountId => UserInfo<T::AccountId,T::Hash>;
 
         // data id => data struct
+        // TODO: the data should be stored into distributed database through substrate.
         DataInfo get(data): map T::Hash => Option<Data<T::AccountId,T::Hash,T::Balance>>;
 
         Nonce get(get_n): u64;
