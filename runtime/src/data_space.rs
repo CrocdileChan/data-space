@@ -79,9 +79,18 @@ decl_module! {
 
         fn set_price(origin, data_id: T::Hash,new_price: T::Balance) -> Result{
             let user = ensure_signed(origin)?;
+            if <Owners<T>>::exists(&user){
+                Err("no account")
+            }else {
+                if let Some(mut data) = Self::data(data_id){
+                    data.price = new_price;
+                    Self::deposit_event(RawEvent::PriceSet(user,data_id,new_price));
+                    Ok(())
+                }else {
+                    Err("data not found")
+                }
+            }
 
-            Self::deposit_event(RawEvent::PriceSet(user,data_id,new_price));
-            Ok(())
         }
 
         fn buy_data(origin, seller: T::AccountId, data_id: T::Hash, pay_price: T::Balance) -> Result {
