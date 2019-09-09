@@ -12,7 +12,7 @@ pub trait Trait: balances::Trait {
 
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct DataSpace<AccountId,Hash> {
+pub struct UserInfo<AccountId,Hash> {
     user_id: AccountId,
     user_name: Vec<u8>,
     user_type: u16,
@@ -49,7 +49,7 @@ decl_event! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as DataStore {
-        Owners get(owner_of): map T::AccountId => DataSpace<T::AccountId,T::Hash>;
+        Owners get(owner_of): map T::AccountId => UserInfo<T::AccountId,T::Hash>;
 
         // data id => data struct
         DataInfo get(data): map T::Hash => Option<Data<T::AccountId,T::Hash,T::Balance>>;
@@ -64,7 +64,7 @@ decl_module! {
 
         fn register_account(origin, user_name: Vec<u8>, user_type: u16) -> Result {
             let user_id = ensure_signed(origin)?;
-            let new_data_space: DataSpace<T::AccountId,T::Hash> = DataSpace{
+            let new_data_space: UserInfo<T::AccountId,T::Hash> = UserInfo{
                 user_id: user_id.clone(),
                 user_name: user_name,
                 user_type: user_type,
@@ -156,7 +156,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
 
-    fn register(user_id: T::AccountId,new_data_space: DataSpace<T::AccountId,T::Hash>) {
+    fn register(user_id: T::AccountId,new_data_space: UserInfo<T::AccountId,T::Hash>) {
         <Owners<T>>::insert(&user_id,new_data_space);
         Self::deposit_event(RawEvent::Registered(user_id));
     }
@@ -170,12 +170,12 @@ impl<T: Trait> Module<T> {
 
     fn remove(user_id: T::AccountId,data_id: T::Hash) {
         <DataInfo<T>>::remove(data_id.clone());
-        let mut ds: DataSpace<T::AccountId,T::Hash> = Self::owner_of(&user_id);
+        let mut ds: UserInfo<T::AccountId,T::Hash> = Self::owner_of(&user_id);
         ds.own_data.retain(|&x| x!=data_id);
         Self::deposit_event(RawEvent::Removed(user_id,data_id));
     }
 
-    fn contains_data(data_id: T::Hash, ds: DataSpace<T::AccountId,T::Hash>) -> bool{
+    fn contains_data(data_id: T::Hash, ds: UserInfo<T::AccountId,T::Hash>) -> bool{
         //if contains in own_data or bought_list
         for od in ds.own_data {
             if od == data_id {
