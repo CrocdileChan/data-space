@@ -98,9 +98,8 @@ decl_module! {
         }
 
         fn upload_data(origin, data_name: Vec<u8>, data_content: Vec<u8>, to_company: T::AccountId, order_id: usize) -> Result {
-            let company = ensure_signed(origin)?;
             let person = ensure_signed(origin)?;
-            let is_existed = <People<T>>::exists(&company);
+            let is_existed = <People<T>>::exists(&to_company);
             if !is_existed {
                 <People<T>>::insert(person.clone(), Vec::new());
             }
@@ -123,7 +122,7 @@ decl_module! {
                 <People<T>>::insert(person.clone(), Vec::new());
                 Err("no person")
             }else {
-                let mut metadata_list = Self::get_data(&person);
+                let metadata_list = Self::get_data(&person);
                 for mut metadata in metadata_list {
                     if metadata.to_company == to_company && metadata.order_id == order_id {
                         let ipfs_hash = Self::add_by_ipfs(data_content);
@@ -156,12 +155,12 @@ impl<T: Trait> Module<T> {
         for metadata in metadata_list {
             if metadata.to_company == company && metadata.order_id == order_id {
 
-                for order in orders {
+                for order in &orders {
                     if order.id == order_id {
                         let data = Self::get_by_ipfs(metadata.ipfs_hash);
                         let pay = order.unit_price;
                         <balances::Module<T> as Currency<_>>::transfer(&company, &person, pay)?;
-                        T::Currency::set_lock(BUY_Lock,&person,pay,T::BlockNumber::max_value(),WithdrawReasons::all());
+                        T::Currency::set_lock(BUY_Lock,&person, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
                         Self::deposit_event(RawEvent::Transfered(data));
                     }
                 }
