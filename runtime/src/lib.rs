@@ -187,9 +187,12 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
+
+//use support::traits::Currency;
 /// Used for the module template in `./data_space.rs`
 impl data_space::Trait for Runtime {
 	type Event = Event;
+	type Currency = Balances;
 }
 
 construct_runtime!(
