@@ -11,7 +11,7 @@ pub trait Trait: system::Trait+balances::Trait {
     type Currency: LockableCurrency<Self::AccountId, Moment=Self::BlockNumber>;
 }
 
-const BUY_Lock: LockIdentifier = *b"buy_lock";
+const BUY_LOCK: LockIdentifier = *b"buy_lock";
 
 decl_event! {
     pub enum Event<T>
@@ -20,6 +20,7 @@ decl_event! {
     {
        Transfered(Vec<u8>),
        Confirmed(AccountId,usize),
+       TippedOff(bool),
     }
 }
 
@@ -49,7 +50,7 @@ decl_storage! {
 
         People get(get_data): map T::AccountId => Vec<DataMetadata<T::AccountId>>;
 
-        // todo: we will use IPFS to store the data. Now we cannot use IPFS on the substrate runtime.
+        // todo: We will use IPFS to store the data. Now we cannot use IPFS on the substrate runtime. Maybe we can use core/offchain to complete it.
         Data get(get_content): map u64 => Vec<u8>;
 
         Nonce get(get_n): u64;
@@ -75,9 +76,34 @@ decl_module! {
         fn confirm_data(origin, person: T::AccountId, order_id: usize) -> Result {
             let company = ensure_signed(origin)?;
             ensure!(company != person, "you can't confirm to buy your data");
-            T::Currency::remove_lock(BUY_Lock,&person);
+            T::Currency::remove_lock(BUY_LOCK,&person);
             Self::deposit_event(RawEvent::Confirmed(person,order_id));
             Ok(())
+        }
+
+        fn tip_off_data(origin, person: T::AccountId, order_id: usize) -> Result {
+            let company = ensure_signed(origin)?;
+            ensure!(company != person, "you can't tip-off  yourself");
+            if let Some(metadata) = Self::get_metadata(&person,&company,order_id){
+                let person_data = Self::get_by_ipfs(metadata.ipfs_hash);
+                if let Some(order) = Self::get_orderform(&company, order_id){
+                    let is_legal = Self::validate_data(person_data, order.content);
+                    if is_legal {
+                        // the company does evil, we need to lock the company's account or other ways for punishment.
+                        T::Currency::set_lock(BUY_LOCK, &company, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
+                        T::Currency::remove_lock(BUY_LOCK, &person);
+                    }else {
+                        // the person does evil, we need to keep locking the person's account or other ways for punishment.
+                    };
+                    Self::deposit_event(RawEvent::TippedOff(is_legal));
+                }else {
+                    return Err("no orderform");
+                };
+                Ok(())
+            }else {
+                Err("no data to tip-off")
+            }
+
         }
 
         fn upload_order(origin, order_name: Vec<u8>, content: Vec<u8>, unit_price: T::Balance) -> Result{
@@ -160,11 +186,10 @@ impl<T: Trait> Module<T> {
                         let data = Self::get_by_ipfs(metadata.ipfs_hash);
                         let pay = order.unit_price;
                         <balances::Module<T> as Currency<_>>::transfer(&company, &person, pay)?;
-                        T::Currency::set_lock(BUY_Lock,&person, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
+                        T::Currency::set_lock(BUY_LOCK,&person, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
                         Self::deposit_event(RawEvent::Transfered(data));
                     }
                 }
-
 
             }
         };
@@ -174,22 +199,6 @@ impl<T: Trait> Module<T> {
 
     fn add_by_ipfs(value: Vec<u8>) -> u64
     {
-       /*let mut opts = RequestInit::new();
-       opts.method("POST");
-       let req = Request::new_with_str_and_init(
-           "http://localhost:5001/api/v0/add",
-           &opts,
-       );
-       opts.body(value);
-       opts.mode(RequestMode::Cors);
-       req.headers().set("Content-Type","multipart/form-data");
-       let window = web_sys::window().ok_or_else(|| JsValue::from_str("Could not get a window object")).unwrap();
-       let resp_value = JsFuture::from(window.fetch_with_request(&req))?;
-       let resp: Response = resp_value.dyn_into().unwrap();
-       let json = JsFuture::from(resp.json()?)?;
-       let ipfs_resp: IpfsResp = json.into_serde().unwrap();
-       ipfs_resp.hash*/
-
         // simulate store into IPFS
         let ipfs_hash= Self::get_n();
         <Data<T>>::insert(&ipfs_hash,value);
@@ -198,22 +207,36 @@ impl<T: Trait> Module<T> {
     }
 
     fn get_by_ipfs(key: u64) -> Vec<u8> {
-        /*let mut opts = RequestInit::new();
-       opts.method("GET");
-       opts.mode(RequestMode::Cors);
-       let key_str = str::from_utf8(&key).unwrap();
-       let req = Request::new_with_str_and_init(
-           "http://localhost:8080/ipfs/"+key_str,
-           &opts,
-       );
-       let window = web_sys::window().ok_or_else(|| JsValue::from_str("Could not get a window object")).unwrap();
-       let resp_value = JsFuture::from(window.fetch_with_request(&req))?;
-       let resp: Response = resp_value.dyn_into().unwrap();
-       let txt = JsFuture::from(resp.text()?)?;
-       let ipfs_value: Vec<u8> = txt.into_serde().unwrap();
-       ipfs_value*/
+        // simulate get from IPFS
         Self::get_content(key)
+    }
 
+    // todo: We will open this function on the 'ink' so that the every company can write the smart contract for their own validator.
+    fn validate_data(data: Vec<u8>, order: Vec<u8>) -> bool {
+        data != order
+    }
+
+    fn get_metadata(person: &T::AccountId, company: &T::AccountId, order_id: usize) -> Option<DataMetadata<T::AccountId>> {
+        let mut data_metadata: Option<DataMetadata<T::AccountId>> = None;
+        let metadata_list = Self::get_data(person);
+        for metadata in metadata_list {
+            if &metadata.to_company == company && metadata.order_id == order_id {
+                data_metadata = Some(metadata)
+            }
+        }
+        data_metadata
+
+    }
+
+    fn get_orderform(company: &T::AccountId, order_id: usize) -> Option<OrderForm<T::Balance>> {
+        let mut order_form: Option<OrderForm<T::Balance>> = None;
+        let order_list = Self::get_order(company);
+        for order in order_list {
+            if order.id == order_id {
+                order_form = Some(order)
+            }
+        }
+        order_form
     }
 
 }
