@@ -4,10 +4,19 @@
 ## Introduction
 Data Space is  a bussiness platform for individual users and enterprises to make data transactions.  Now it is a simple implementation: 
 On this platform, companies can publish their Order Forms to declare what data they want and how much money they can pay. For example, food manufacturers want to know what people eat last month so that they can make more popular food for sale this month.  
-So they can publish their order form on the chain, then people find the order form and decide whether make a deal or not.
-If people want, they just upload their data onto the chain. When companies buy people's data, they will first pay money for it and lock people's balance account to prevent they offering a invalid data.
-Next, companies need to validate data, when they confirm it, they will call chain to remove people's lock. If data is invalid (empty or same as order form), companies can tip off on the chain to punish people and if companies lie, they will be also punished themselves by locking Balance Accounts.
+On the Data Space, all data are just belong to Users themselves and Companies cannot own their data if they don't allow.
+The Data Space does not belong to anyone, it just belongs to the whole Internet.    
 
+##Process
+Alice: Company  
+Bob: Person  
+1. Alice publish an Order Form onto the chain, it contains what data it want to obtain 
+and how much money can pay from people.  
+2. Bob see the Order Form on the Data Space, he can choose to upload his data on chain.
+3. Alice pays money for data on chain, the chain will lock Bob's Account temporarily.
+4. Alice confirms the data is legal, (just not empty and not same as Order Form) the chain will unlock Bob's Account.
+5. When Alice find the data is illegal, it can tip off Bob on chain, then the chain will validate data. 
+If data is really illegal, the chain will keep locking Bob's Account. Otherwise Alice's Accout will be locked for punishment. 
 
 # Building
 
