@@ -7,7 +7,7 @@ On this platform, companies can publish their Order Forms to declare what data t
 On the Data Space, all data are just belong to Users themselves and Companies cannot own their data if they don't allow.
 The Data Space does not belong to anyone, it just belongs to the whole Internet.    
 
-##Process
+## Process
 Alice: Company  
 Bob: Person  
 1. Alice publish an Order Form onto the chain, it contains what data it want to obtain 
