@@ -1,7 +1,13 @@
 
 # data-space
 
-A new SRML-based Substrate node, ready for hacking.
+## Introduction
+Data Space is  a bussiness platform for individual users and enterprises to make data transactions.  Now it is a simple implementation: 
+On this platform, companies can publish their Order Forms to declare what data they want and how much money they can pay. For example, food manufacturers want to know what people eat last month so that they can make more popular food for sale this month.  
+So they can publish their order form on the chain, then people find the order form and decide whether make a deal or not.
+If people want, they just upload their data onto the chain. When companies buy people's data, they will first pay money for it and lock people's balance account to prevent they offering a invalid data.
+Next, companies need to validate data, when they confirm it, they will call chain to remove people's lock. If data is invalid (empty or same as order form), companies can tip off on the chain to punish people and if companies lie, they will be also punished themselves by locking Balance Accounts.
+
 
 # Building
 

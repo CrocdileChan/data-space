@@ -39,7 +39,7 @@ pub struct DataMetadata<AccountId>{
     data_name: Vec<u8>,
     to_company: AccountId,
     order_id: usize,
-    ipfs_hash: u64,
+    hash_key: u64,
 }
 
 
@@ -50,7 +50,7 @@ decl_storage! {
 
         People get(get_data): map T::AccountId => Vec<DataMetadata<T::AccountId>>;
 
-        // todo: We will use IPFS to store the data. Now we cannot use IPFS on the substrate runtime. Maybe we can use core/offchain to complete it.
+        // where user data is actually stored
         Data get(get_content): map u64 => Vec<u8>;
 
         Nonce get(get_n): u64;
@@ -83,18 +83,18 @@ decl_module! {
 
         fn tip_off_data(origin, person: T::AccountId, order_id: usize) -> Result {
             let company = ensure_signed(origin)?;
-            ensure!(company != person, "you can't tip-off  yourself");
+            ensure!(company != person, "you can't tip-off yourself");
             if let Some(metadata) = Self::get_metadata(&person,&company,order_id){
-                let person_data = Self::get_by_ipfs(metadata.ipfs_hash);
+                let person_data = Self::get_from_chain(metadata.hash_key);
                 if let Some(order) = Self::get_orderform(&company, order_id){
                     let is_legal = Self::validate_data(person_data, order.content);
                     if is_legal {
                         // the company does evil, we need to lock the company's account or other ways for punishment.
                         T::Currency::set_lock(BUY_LOCK, &company, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
                         T::Currency::remove_lock(BUY_LOCK, &person);
-                    }else {
-                        // the person does evil, we need to keep locking the person's account or other ways for punishment.
-                    };
+                    }
+                    // if person does evil, we need to keep locking the person's account or other ways for punishment.
+
                     Self::deposit_event(RawEvent::TippedOff(is_legal));
                 }else {
                     return Err("no orderform");
@@ -130,9 +130,9 @@ decl_module! {
                 <People<T>>::insert(person.clone(), Vec::new());
             }
             let mut metadata_list = Self::get_data(&person);
-            let ipfs_hash = Self::add_by_ipfs(data_content);
+            let hash_key = Self::add_to_chain(data_content);
             let new_data: DataMetadata<T::AccountId> = DataMetadata{
-                ipfs_hash: ipfs_hash,
+                hash_key: hash_key,
                 data_name: data_name,
                 to_company: to_company,
                 order_id: order_id,
@@ -151,8 +151,8 @@ decl_module! {
                 let metadata_list = Self::get_data(&person);
                 for mut metadata in metadata_list {
                     if metadata.to_company == to_company && metadata.order_id == order_id {
-                        let ipfs_hash = Self::add_by_ipfs(data_content);
-                        metadata.ipfs_hash = ipfs_hash;
+                        let hash_key = Self::add_to_chain(data_content);
+                        metadata.hash_key = hash_key;
                         metadata.data_name = data_name;
                         break;
                     }
@@ -166,7 +166,7 @@ decl_module! {
 }
 
 //#[cfg_attr(feature = "std",derive(Debug, Serialize, Deserialize))]
-//pub struct IpfsResp {
+//pub struct Resp {
 //    pub name: Vec<u8>,
 //    pub hash: Vec<u8>,
 //    pub size: Vec<u8>,
@@ -183,7 +183,7 @@ impl<T: Trait> Module<T> {
 
                 for order in &orders {
                     if order.id == order_id {
-                        let data = Self::get_by_ipfs(metadata.ipfs_hash);
+                        let data = Self::get_from_chain(metadata.hash_key);
                         let pay = order.unit_price;
                         <balances::Module<T> as Currency<_>>::transfer(&company, &person, pay)?;
                         T::Currency::set_lock(BUY_LOCK,&person, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
@@ -197,23 +197,22 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn add_by_ipfs(value: Vec<u8>) -> u64
+    fn add_to_chain(value: Vec<u8>) -> u64
     {
-        // simulate store into IPFS
-        let ipfs_hash= Self::get_n();
-        <Data<T>>::insert(&ipfs_hash,value);
+        let hash_key= Self::get_n();
+        <Data<T>>::insert(&hash_key,value);
         <Nonce<T>>::mutate(|n| *n += 1);
-        ipfs_hash
+        hash_key
     }
 
-    fn get_by_ipfs(key: u64) -> Vec<u8> {
-        // simulate get from IPFS
+    fn get_from_chain(key: u64) -> Vec<u8> {
         Self::get_content(key)
     }
 
-    // todo: We will open this function on the 'ink' so that the every company can write the smart contract for their own validator.
+    // Brief Implementation:
+    // just validate if data is empty and data equals order
     fn validate_data(data: Vec<u8>, order: Vec<u8>) -> bool {
-        data != order
+        data != order && !data.is_empty()
     }
 
     fn get_metadata(person: &T::AccountId, company: &T::AccountId, order_id: usize) -> Option<DataMetadata<T::AccountId>> {
