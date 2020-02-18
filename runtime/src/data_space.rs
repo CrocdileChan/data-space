@@ -2,7 +2,7 @@ use rstd::vec::Vec;
 use parity_codec::{Decode, Encode};
 use support::{
     decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap, StorageValue,traits::{Currency,LockIdentifier,LockableCurrency,WithdrawReasons}};
-use runtime_primitives::traits::Bounded;
+use runtime_primitives::traits::{Bounded, One};
 use system::ensure_signed;
 
 pub trait Trait: system::Trait+balances::Trait {
@@ -10,7 +10,10 @@ pub trait Trait: system::Trait+balances::Trait {
     type Currency: LockableCurrency<Self::AccountId, Moment=Self::BlockNumber>;
 }
 
-const BUY_LOCK: LockIdentifier = *b"buy_lock";
+pub type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+
+const COMPANY_LOCK: LockIdentifier = *b"cpn_lock";
+const PERSON_LOCK: LockIdentifier = *b"psn_lock";
 
 decl_event! {
     pub enum Event<T>
@@ -81,7 +84,7 @@ decl_module! {
         fn confirm_data(origin, person: T::AccountId, order_id: usize) -> Result {
             let company = ensure_signed(origin)?;
             ensure!(company != person, "you can't confirm to buy your data");
-            T::Currency::remove_lock(BUY_LOCK,&person);
+            T::Currency::remove_lock(PERSON_LOCK,&person);
             Self::deposit_event(RawEvent::Confirmed(person,order_id));
             Ok(())
         }
@@ -100,8 +103,8 @@ decl_module! {
                     let is_legal = Self::validate_data(person_data, order.content);
                     if is_legal {
                         // the company does evil, we need to lock the company's account or other ways for punishment.
-                        T::Currency::set_lock(BUY_LOCK, &company, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
-                        T::Currency::remove_lock(BUY_LOCK, &person);
+                        T::Currency::set_lock(COMPANY_LOCK, &company, Bounded::max_value(), <system::Module<T>>::block_number() + One::one() ,WithdrawReasons::all());
+                        T::Currency::remove_lock(PERSON_LOCK, &person);
                     }
                     // if person does evil, we need to keep locking the person's account or other ways for punishment.
 
@@ -192,7 +195,7 @@ impl<T: Trait> Module<T> {
                         let data = Self::get_from_chain(metadata.hash_key);
                         let pay = order.unit_price;
                         <balances::Module<T> as Currency<_>>::transfer(&company, &person, pay)?;
-                        T::Currency::set_lock(BUY_LOCK,&person, Bounded::max_value(), T::BlockNumber::max_value(),WithdrawReasons::all());
+                        T::Currency::set_lock(PERSON_LOCK, &person, pay.into(),  <system::Module<T>>::block_number() + One::one(), WithdrawReasons::all());
                         Self::deposit_event(RawEvent::Transfered(data));
                     }
                 }
