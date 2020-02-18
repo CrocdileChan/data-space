@@ -195,7 +195,7 @@ impl<T: Trait> Module<T> {
                         let data = Self::get_from_chain(metadata.hash_key);
                         let pay = order.unit_price;
                         <balances::Module<T> as Currency<_>>::transfer(&company, &person, pay)?;
-                        T::Currency::set_lock(PERSON_LOCK, &person, pay.into(),  <system::Module<T>>::block_number() + One::one(), WithdrawReasons::all());
+                        T::Currency::set_lock(PERSON_LOCK, &person, Bounded::max_value(),  <system::Module<T>>::block_number() + One::one(), WithdrawReasons::all());
                         Self::deposit_event(RawEvent::Transfered(data));
                     }
                 }
